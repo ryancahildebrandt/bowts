@@ -1,0 +1,197 @@
+---
+title: Bag of Words + Term Similarity
+author: Ryan Hildebrandt
+date: 6/15/2023
+---
+
+```julia; echo = false; results = "hidden"
+include("results.jl")
+```
+
+# **B**ag **O**f **W**ords + **T**erm **S**imilarity
+*Reducing bag of words embedding vector spaces using pretrained embedding derived word similarity*
+
+## Purpose
+This project is an experiment on the effectiveness of using pretrained word embeddings to alter the embedding vector spaces created by bag of word embedding models. Much of the work in the NLP/NLU space relies on pretrained word/sentence embeddings or larger transformer-based models, but the lightweight and relatively quick implementation of bag of words models continues to hold value for many routine NLP tasks. One drawback of bag of words embedding models is the variability of their embedding vector spaces, with the length of any embedding vector depending on the vocabulary contained in the embedded documents. Another drawback of bag of words embeddings is that they are largely unable to account for the meaning of different words in the way pretrained word embeddings are. Take for example the sentence "I need a chicken tender, but a chicken nugget would do.". Pretrained embeddings are able to account for the different senses of words and words that are similar, such that both the individual word embeddings and the sentence embeddings for this example sentence would consider "chicken nugget" and "chicken tender" to be quite similar. By contrast, bag of words models can only encode the individual words or n-grams within the sentence, and will necessarily treat them as unique regardless of how sematically similar they may be. So in a bag of words model, "chicken nugget" and "chicken tender" would be treated as two values in the embedding space that are just as different as "I" and "chicken" or any other two words. This is where pretrained embeddings may be able to help by accounting for similar terms in the documents to be embedded via bag of words models. So for this project, I'll be looking into the process and benefits of combining these two embedding approaches, and looking to answer the following question:
+- **Can we use pretrained word embeddings to reduce a bag of words model embedding vector space by combining semantically similar terms, and if so, does this offer any accuracy benefit in a text classification task?**
+
+## Approach
+As with previous work evaluating sentence embedding models, I'll be using a few different datasets, embedding models, and classifiers. 
+
+- **Pretrained Word Embeddings**
+    - [GloVe Embeddings, 60b Tokens, 50d embedding vectors](https://nlp.stanford.edu/projects/glove/)
+- **Bag of Words Models**
+    - TF-IDF (MLJText)
+    - Count (MLJText)
+    - BM25 (MLJText)
+- **Classifiers**
+    - Dense neural network classifier (MLJFlux)
+    - Random forest classifier (EvoTrees)
+    - XGBoost classifier (XGBoost)
+- **Datasets**
+    - [Bitext Customer Support](https://www.kaggle.com/datasets/bitext/training-dataset-for-chatbotsvirtual-assistants), for shorter documents
+    - [Multilabel Classification from Analytics Vidhya Hackathon, Abstracts](https://www.kaggle.com/datasets/shivanandmn/multilabel-classification-dataset?select=train.csv), for longer documents
+    - [Multilabel Classification from Analytics Vidhya Hackathon, Titles](https://www.kaggle.com/datasets/shivanandmn/multilabel-classification-dataset?select=train.csv), for mid-length documents
+
+## Algorithm
+As for the central idea of this project, I landed on the following approach for combining pretrained and bag of words embeddings before passing the embeddings to the classifiers for evaluation.
+
+### 1) Vocabulary Extraction & Embedding
+- Beyond splitting documents into individual tokens, there were only a few preprocessing steps that needed to happen before compiling the vocabulary for each set of documents
+- At a word level, all tokens were lowercased and any token "n't" was marked as Out Of Vocabulary as the splitting of contractions was somewhat inconsistent
+- Any token marked as an aggregated feature is passed over, we'll touch on this later
+```julia; results = "hidden"
+function word_prep(word::Union{String, SubString{String}})
+        word = lowercase(word)
+        is_feature = contains(word, r"<feature_.+>")
+        is_nt = word == "n't"
+        is_vocab = word in _vocab
+        if is_vocab | is_feature | is_nt
+            out = word
+        else
+            out = "OOV"
+        end
+    return out
+end
+```
+- At a document level, each document gets tokenized and passed through the word_prep function above as needed, depending on the contents
+```julia; results = "hidden"
+function doc_prep(doc::String)
+    has_space = contains(doc, " ")
+    new_doc = String[]
+    split_doc = split(doc)
+    if has_space
+        for d in split_doc
+            is_feature = contains(d, r"<feature_.+>")
+            is_nt = d == "n't"        
+            if is_feature | is_nt
+                new_doc = push!(new_doc, word_prep(d))
+            else
+                new_doc = push!(new_doc, tokenize(d)...)
+            end
+        end
+    else
+        new_doc = [word_prep(doc)]
+    end
+    out = word_prep.(new_doc)
+    return out
+end
+```
+- From here, each set of documents gets represented as a list of unique tokens
+```julia; results = "hidden"
+function pull_vocab(docs::Vector{String})
+    out = []
+    for doc in docs
+        doc = doc_prep(doc)
+        push!(out, doc)
+    end
+    out = union(vcat(out...))
+    return out
+end
+```
+- And finally, each token is converted to an embedding vector via the pretrained word embedding file
+```julia; results = "hidden"
+function encode(doc::String)
+    doc = doc_prep(doc)
+    ind = [ind_dict[d] for d in doc]
+    out = emb_df[ind, "emb"]
+    return out
+end
+```
+- This results in a vocabulary and embedding matrix, with each row of the matrix corresponding to one vocabulary entry
+- To give this algorithm a better chance of cleanly clustering and aggregating relevant features (and to make eventual visualization easier), the embedding matrix is passed to UMAP for dimensionality reduction and centered
+### 2) Term Clustering
+- Once we have the embedding matrix, euclidean distance is calculated between each of the points
+- This pairwise distance matrix is then passed to a hierarchical clustering algorithm (from Clustering.jl) to form the cluster tree
+```julia; results = "hidden"
+function docs_to_clusters(docs::Vector{String})
+    vocab = pull_vocab(docs)
+    coords = docs_to_word_embs(vocab)
+    dists = pairwise(Euclidean(), coords, dims = 2)
+    clusts = hclust(dists)
+    out = [vocab, coords, dists, clusts]
+    return out
+end
+```
+- I explored a range of clustering algorithms available in Clustering.jl, and found that hierarchical clustering via hclust provided the level of flexibility I was looking for in this algorithm
+- Note that at this stage the clustering tree has not been "cut" at any particular branch yet, that will come in the next step and forms one of the main parameters used to control term aggregation
+### 3) Term Aggregation
+- With the clustering tree generated, the next step is to choose value of k at which to cut the tree, resulting in k clusters
+    - From Clustering.jl docs: `k::Integer` (optional) the number of desired clusters.
+- Note that k's relationship to the cluster tree (and by extension the embedded vocabulary) means that it will be one more than the number of aggregated features, each of which will contain any number of terms which have been identified to be semantically similar enough to end up in the same cluster
+- In addition to k, I included two measures of cluster quality, mean euclidean distance and silhouette score
+    - Mean euclidean distance measures the average distance from each point in the cluster to the cluster centroid, with lower values representing a more tightly grouped cluster
+    - Silhouette score also measures how well each point is matched to its cluster, but contrasts this against a measure of how well each point is diferrentiated from other clusters
+    - Once these metrics are calculated, both are normalized such that they range from -1 to 1 and higher values are related to better cluster fit
+- From here, the next step is to choose values of k and one of the goodness of fit metrics to use in the term aggregation
+- For example, with k = 5 and eucl = .4, we would split the data into 5 clusters, select those with a mean euclidean distance < .4, and aggregate all terms in each selected cluster into a standin feature
+```julia; results = "hidden"
+function combine_features(grouped_vocab::Vector{Vector{String}}, metric::Vector{Float64}, threshold::Number, feature_override::Vector)
+    flat_vocab = vcat(grouped_vocab...)
+    out = Dict(flat_vocab .=> flat_vocab)
+    n = 0
+    for (group, met) in zip(grouped_vocab, metric)
+        if 0.0 < met < threshold
+            n += 1
+            for word in group
+                out[word] = "<feature_$n>"
+            end
+        end
+    end
+    for word in feature_override
+        out[word] = word
+    end
+    return out
+end
+# in the above function, feature_override is provided as a way to ensure that certain words do not get aggregated, but did not end up being explored here
+```
+- After mapping each of the aggregated features to the original documents, they are ready to be passed to the bag of words embedding models
+- All of the embedding vector space manipulation has completed at this point, so the bag of word embeddings and classifiers are all standard in their implementations
+
+## Results
+In addition to several values for k and the goodness of fit metrics, I also included unclustered embeddings from each bag of words model as a baseline before evaluating using the three classifiers. As an additional note, my machine was limited in how much of the larger datasets it could handle, so I took a sample of 3000 documents (as many documents from the abstract dataset as my machine could handle) from each for a balanced comparison, in addition to running the classifiers again with as many documents as possible. This sample size difference didn't end up changing the performance in any major ways, so unless otherwise indicated I'll use the sample of 3000 documents from here on out.
+
+### Main Effects
+```julia, echo = false
+print(sample_mains)
+```
+
+#### Datasets
+There were some overall differences in accuracy by dataset, with the Bitext dataset outperforming the abstract dataset, which outperformed the title dataset. The differences based on document length were somewhat unsurprising, with the long document abstract dataset outperforming the medium length title dataset. It may be that academic paper titles are a little less reliably related to their content as compared to their abstracts.
+```julia
+combine(groupby(results_sample, "dataset"), "acc" => mean)
+```
+
+#### Term Similarity Metrics
+As far as term similarity metrics, there were no significant effects of k value, and the main effects of selection metric and metric threshold values were less than clear. The main effect of threshold seemed to show a negative association between selection threshold and accuracy, but the range of accuracy was relatively small and the accuracy for the highest and lowest thresholds were nearly identical. There was also a main effect of selection metric with euclidean distance and silhouette score outperforming the baseline, but there doesn't seem to be a clear interpretation of this relationship when there is no interpretable effect of threshold value on accuracy.
+```julia
+combine(groupby(results_sample, "k"), "acc" => mean)
+```
+```julia
+combine(groupby(results_sample, "metric"), "acc" => mean)
+```
+```julia
+combine(groupby(results_sample, "threshold"), "acc" => mean)
+```
+
+#### Embedding Models
+The bag of words models showed an expected difference in accuracy, with simple count emgeddings having the lowest performance and both TF-IDF and BM25 having higher performance. Both TF-IDF and BM25 incorporate weights into the more standard count embeddings with the express intent of improving the information stored in the embeddings, so this serves as a small sanity check that the different models are behaving as expected.
+```julia
+combine(groupby(results_sample, "bow"), "acc" => mean)
+```
+
+#### Classifiers
+The main effect of classifier was also as expected, with random forest classifier performing worse than the dense neural network, which performed worse than the xgboost tree classifier.
+```julia
+combine(groupby(results_sample, "classifier"), "acc" => mean)
+```
+
+### Interactions
+```julia, echo = false
+print(sample_model_interactions)
+```
+
+There was only one interaction in the results, which was a three-way interaction between dataset, bag of words model, and classifier. As tends to be the case with anything over a two-way interaction, interpretation of this one is on the tricky side, so I'll lay out the relevant cases below as succinctly as possible. When using count embeddings in the random forest classifier, the accuracy on title dataset was less than that of both the abstract & bitext datasets, though the abstract and bitext datasets did not differ significantly. For the other two classifiers with the same embeddings, the interaction effect goes away and instead the main effect of dataset reappears. Making sense of this interaction as best I can, I'd say that the accuracy decrease resulting from the least information-dense embeddings (count) and the worst performing classifier (random forest) has a bigger effect on the relatively easy bitext dataset, bringing it down to the accuracy of the abstract dataset.
+
+## Conclusions
+Unfortunately, the central premise of the present project didn't find support in the data. The only effects present seem to be those more or less expected from the datasets, embedding models, and classifiers. None of the clustering k values, similarity metrics, or threshold values produced the desired results in a consistent or meaningful way, in either main effects or interactions. Additionally, the relative complexity of implementing the term similarity aspect of this project immediately set a fairly high bar for a worthwhile improvement boost.

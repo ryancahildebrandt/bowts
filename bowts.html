@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<HTML lang = "en">
+<HEAD>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Bag of Words + Term Similarity</title>
+  
+
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]},
+      TeX: { equationNumbers: { autoNumber: "AMS" } }
+    });
+  </script>
+
+  <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+  </script>
+
+  
+<style>
+pre.hljl {
+    border: 1px solid #ccc;
+    margin: 5px;
+    padding: 5px;
+    overflow-x: auto;
+    color: rgb(68,68,68); background-color: rgb(251,251,251); }
+pre.hljl > span.hljl-t { }
+pre.hljl > span.hljl-w { }
+pre.hljl > span.hljl-e { }
+pre.hljl > span.hljl-eB { }
+pre.hljl > span.hljl-o { }
+pre.hljl > span.hljl-k { color: rgb(148,91,176); font-weight: bold; }
+pre.hljl > span.hljl-kc { color: rgb(59,151,46); font-style: italic; }
+pre.hljl > span.hljl-kd { color: rgb(214,102,97); font-style: italic; }
+pre.hljl > span.hljl-kn { color: rgb(148,91,176); font-weight: bold; }
+pre.hljl > span.hljl-kp { color: rgb(148,91,176); font-weight: bold; }
+pre.hljl > span.hljl-kr { color: rgb(148,91,176); font-weight: bold; }
+pre.hljl > span.hljl-kt { color: rgb(148,91,176); font-weight: bold; }
+pre.hljl > span.hljl-n { }
+pre.hljl > span.hljl-na { }
+pre.hljl > span.hljl-nb { }
+pre.hljl > span.hljl-nbp { }
+pre.hljl > span.hljl-nc { }
+pre.hljl > span.hljl-ncB { }
+pre.hljl > span.hljl-nd { color: rgb(214,102,97); }
+pre.hljl > span.hljl-ne { }
+pre.hljl > span.hljl-neB { }
+pre.hljl > span.hljl-nf { color: rgb(66,102,213); }
+pre.hljl > span.hljl-nfm { color: rgb(66,102,213); }
+pre.hljl > span.hljl-np { }
+pre.hljl > span.hljl-nl { }
+pre.hljl > span.hljl-nn { }
+pre.hljl > span.hljl-no { }
+pre.hljl > span.hljl-nt { }
+pre.hljl > span.hljl-nv { }
+pre.hljl > span.hljl-nvc { }
+pre.hljl > span.hljl-nvg { }
+pre.hljl > span.hljl-nvi { }
+pre.hljl > span.hljl-nvm { }
+pre.hljl > span.hljl-l { }
+pre.hljl > span.hljl-ld { color: rgb(148,91,176); font-style: italic; }
+pre.hljl > span.hljl-s { color: rgb(201,61,57); }
+pre.hljl > span.hljl-sa { color: rgb(201,61,57); }
+pre.hljl > span.hljl-sb { color: rgb(201,61,57); }
+pre.hljl > span.hljl-sc { color: rgb(201,61,57); }
+pre.hljl > span.hljl-sd { color: rgb(201,61,57); }
+pre.hljl > span.hljl-sdB { color: rgb(201,61,57); }
+pre.hljl > span.hljl-sdC { color: rgb(201,61,57); }
+pre.hljl > span.hljl-se { color: rgb(59,151,46); }
+pre.hljl > span.hljl-sh { color: rgb(201,61,57); }
+pre.hljl > span.hljl-si { }
+pre.hljl > span.hljl-so { color: rgb(201,61,57); }
+pre.hljl > span.hljl-sr { color: rgb(201,61,57); }
+pre.hljl > span.hljl-ss { color: rgb(201,61,57); }
+pre.hljl > span.hljl-ssB { color: rgb(201,61,57); }
+pre.hljl > span.hljl-nB { color: rgb(59,151,46); }
+pre.hljl > span.hljl-nbB { color: rgb(59,151,46); }
+pre.hljl > span.hljl-nfB { color: rgb(59,151,46); }
+pre.hljl > span.hljl-nh { color: rgb(59,151,46); }
+pre.hljl > span.hljl-ni { color: rgb(59,151,46); }
+pre.hljl > span.hljl-nil { color: rgb(59,151,46); }
+pre.hljl > span.hljl-noB { color: rgb(59,151,46); }
+pre.hljl > span.hljl-oB { color: rgb(102,102,102); font-weight: bold; }
+pre.hljl > span.hljl-ow { color: rgb(102,102,102); font-weight: bold; }
+pre.hljl > span.hljl-p { }
+pre.hljl > span.hljl-c { color: rgb(153,153,119); font-style: italic; }
+pre.hljl > span.hljl-ch { color: rgb(153,153,119); font-style: italic; }
+pre.hljl > span.hljl-cm { color: rgb(153,153,119); font-style: italic; }
+pre.hljl > span.hljl-cp { color: rgb(153,153,119); font-style: italic; }
+pre.hljl > span.hljl-cpB { color: rgb(153,153,119); font-style: italic; }
+pre.hljl > span.hljl-cs { color: rgb(153,153,119); font-style: italic; }
+pre.hljl > span.hljl-csB { color: rgb(153,153,119); font-style: italic; }
+pre.hljl > span.hljl-g { }
+pre.hljl > span.hljl-gd { }
+pre.hljl > span.hljl-ge { }
+pre.hljl > span.hljl-geB { }
+pre.hljl > span.hljl-gh { }
+pre.hljl > span.hljl-gi { }
+pre.hljl > span.hljl-go { }
+pre.hljl > span.hljl-gp { }
+pre.hljl > span.hljl-gs { }
+pre.hljl > span.hljl-gsB { }
+pre.hljl > span.hljl-gt { }
+</style>
+
+
+
+  <style type="text/css">
+  @font-face {
+  font-style: normal;
+  font-weight: 300;
+}
+@font-face {
+  font-style: normal;
+  font-weight: 400;
+}
+@font-face {
+  font-style: normal;
+  font-weight: 600;
+}
+html {
+  font-family: sans-serif; /* 1 */
+  -ms-text-size-adjust: 100%; /* 2 */
+  -webkit-text-size-adjust: 100%; /* 2 */
+}
+body {
+  margin: 0;
+}
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+main,
+menu,
+nav,
+section,
+summary {
+  display: block;
+}
+audio,
+canvas,
+progress,
+video {
+  display: inline-block; /* 1 */
+  vertical-align: baseline; /* 2 */
+}
+audio:not([controls]) {
+  display: none;
+  height: 0;
+}
+[hidden],
+template {
+  display: none;
+}
+a:active,
+a:hover {
+  outline: 0;
+}
+abbr[title] {
+  border-bottom: 1px dotted;
+}
+b,
+strong {
+  font-weight: bold;
+}
+dfn {
+  font-style: italic;
+}
+h1 {
+  font-size: 2em;
+  margin: 0.67em 0;
+}
+mark {
+  background: #ff0;
+  color: #000;
+}
+small {
+  font-size: 80%;
+}
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+sup {
+  top: -0.5em;
+}
+sub {
+  bottom: -0.25em;
+}
+img {
+  border: 0;
+}
+svg:not(:root) {
+  overflow: hidden;
+}
+figure {
+  margin: 1em 40px;
+}
+hr {
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  height: 0;
+}
+pre {
+  overflow: auto;
+}
+code,
+kbd,
+pre,
+samp {
+  font-family: monospace, monospace;
+  font-size: 1em;
+}
+button,
+input,
+optgroup,
+select,
+textarea {
+  color: inherit; /* 1 */
+  font: inherit; /* 2 */
+  margin: 0; /* 3 */
+}
+button {
+  overflow: visible;
+}
+button,
+select {
+  text-transform: none;
+}
+button,
+html input[type="button"], /* 1 */
+input[type="reset"],
+input[type="submit"] {
+  -webkit-appearance: button; /* 2 */
+  cursor: pointer; /* 3 */
+}
+button[disabled],
+html input[disabled] {
+  cursor: default;
+}
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+input {
+  line-height: normal;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  box-sizing: border-box; /* 1 */
+  padding: 0; /* 2 */
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  height: auto;
+}
+input[type="search"] {
+  -webkit-appearance: textfield; /* 1 */
+  -moz-box-sizing: content-box;
+  -webkit-box-sizing: content-box; /* 2 */
+  box-sizing: content-box;
+}
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+fieldset {
+  border: 1px solid #c0c0c0;
+  margin: 0 2px;
+  padding: 0.35em 0.625em 0.75em;
+}
+legend {
+  border: 0; /* 1 */
+  padding: 0; /* 2 */
+}
+textarea {
+  overflow: auto;
+}
+optgroup {
+  font-weight: bold;
+}
+table {
+  font-family: monospace, monospace;
+  font-size : 0.8em;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+td,
+th {
+  padding: 0;
+}
+thead th {
+    border-bottom: 1px solid black;
+    background-color: white;
+}
+tr:nth-child(odd){
+  background-color: rgb(248,248,248);
+}
+
+
+/*
+* Skeleton V2.0.4
+* Copyright 2014, Dave Gamache
+* www.getskeleton.com
+* Free to use under the MIT license.
+* http://www.opensource.org/licenses/mit-license.php
+* 12/29/2014
+*/
+.container {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box; }
+.column,
+.columns {
+  width: 100%;
+  float: left;
+  box-sizing: border-box; }
+@media (min-width: 400px) {
+  .container {
+    width: 85%;
+    padding: 0; }
+}
+@media (min-width: 550px) {
+  .container {
+    width: 80%; }
+  .column,
+  .columns {
+    margin-left: 4%; }
+  .column:first-child,
+  .columns:first-child {
+    margin-left: 0; }
+
+  .one.column,
+  .one.columns                    { width: 4.66666666667%; }
+  .two.columns                    { width: 13.3333333333%; }
+  .three.columns                  { width: 22%;            }
+  .four.columns                   { width: 30.6666666667%; }
+  .five.columns                   { width: 39.3333333333%; }
+  .six.columns                    { width: 48%;            }
+  .seven.columns                  { width: 56.6666666667%; }
+  .eight.columns                  { width: 65.3333333333%; }
+  .nine.columns                   { width: 74.0%;          }
+  .ten.columns                    { width: 82.6666666667%; }
+  .eleven.columns                 { width: 91.3333333333%; }
+  .twelve.columns                 { width: 100%; margin-left: 0; }
+
+  .one-third.column               { width: 30.6666666667%; }
+  .two-thirds.column              { width: 65.3333333333%; }
+
+  .one-half.column                { width: 48%; }
+
+  /* Offsets */
+  .offset-by-one.column,
+  .offset-by-one.columns          { margin-left: 8.66666666667%; }
+  .offset-by-two.column,
+  .offset-by-two.columns          { margin-left: 17.3333333333%; }
+  .offset-by-three.column,
+  .offset-by-three.columns        { margin-left: 26%;            }
+  .offset-by-four.column,
+  .offset-by-four.columns         { margin-left: 34.6666666667%; }
+  .offset-by-five.column,
+  .offset-by-five.columns         { margin-left: 43.3333333333%; }
+  .offset-by-six.column,
+  .offset-by-six.columns          { margin-left: 52%;            }
+  .offset-by-seven.column,
+  .offset-by-seven.columns        { margin-left: 60.6666666667%; }
+  .offset-by-eight.column,
+  .offset-by-eight.columns        { margin-left: 69.3333333333%; }
+  .offset-by-nine.column,
+  .offset-by-nine.columns         { margin-left: 78.0%;          }
+  .offset-by-ten.column,
+  .offset-by-ten.columns          { margin-left: 86.6666666667%; }
+  .offset-by-eleven.column,
+  .offset-by-eleven.columns       { margin-left: 95.3333333333%; }
+
+  .offset-by-one-third.column,
+  .offset-by-one-third.columns    { margin-left: 34.6666666667%; }
+  .offset-by-two-thirds.column,
+  .offset-by-two-thirds.columns   { margin-left: 69.3333333333%; }
+
+  .offset-by-one-half.column,
+  .offset-by-one-half.columns     { margin-left: 52%; }
+
+}
+html {
+  font-size: 62.5%; }
+body {
+  font-size: 1.5em; /* currently ems cause chrome bug misinterpreting rems on body element */
+  line-height: 1.6;
+  font-weight: 400;
+  font-family: "Raleway", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #222; }
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 2rem;
+  font-weight: 300; }
+h1 { font-size: 3.6rem; line-height: 1.2;  letter-spacing: -.1rem;}
+h2 { font-size: 3.4rem; line-height: 1.25; letter-spacing: -.1rem; }
+h3 { font-size: 3.2rem; line-height: 1.3;  letter-spacing: -.1rem; }
+h4 { font-size: 2.8rem; line-height: 1.35; letter-spacing: -.08rem; }
+h5 { font-size: 2.4rem; line-height: 1.5;  letter-spacing: -.05rem; }
+h6 { font-size: 1.5rem; line-height: 1.6;  letter-spacing: 0; }
+
+p {
+  margin-top: 0; }
+a {
+  color: #1EAEDB; }
+a:hover {
+  color: #0FA0CE; }
+.button,
+button,
+input[type="submit"],
+input[type="reset"],
+input[type="button"] {
+  display: inline-block;
+  height: 38px;
+  padding: 0 30px;
+  color: #555;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 38px;
+  letter-spacing: .1rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  cursor: pointer;
+  box-sizing: border-box; }
+.button:hover,
+button:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+input[type="button"]:hover,
+.button:focus,
+button:focus,
+input[type="submit"]:focus,
+input[type="reset"]:focus,
+input[type="button"]:focus {
+  color: #333;
+  border-color: #888;
+  outline: 0; }
+.button.button-primary,
+button.button-primary,
+input[type="submit"].button-primary,
+input[type="reset"].button-primary,
+input[type="button"].button-primary {
+  color: #FFF;
+  background-color: #33C3F0;
+  border-color: #33C3F0; }
+.button.button-primary:hover,
+button.button-primary:hover,
+input[type="submit"].button-primary:hover,
+input[type="reset"].button-primary:hover,
+input[type="button"].button-primary:hover,
+.button.button-primary:focus,
+button.button-primary:focus,
+input[type="submit"].button-primary:focus,
+input[type="reset"].button-primary:focus,
+input[type="button"].button-primary:focus {
+  color: #FFF;
+  background-color: #1EAEDB;
+  border-color: #1EAEDB; }
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="text"],
+input[type="tel"],
+input[type="url"],
+input[type="password"],
+textarea,
+select {
+  height: 38px;
+  padding: 6px 10px; /* The 6px vertically centers text on FF, ignored by Webkit */
+  background-color: #fff;
+  border: 1px solid #D1D1D1;
+  border-radius: 4px;
+  box-shadow: none;
+  box-sizing: border-box; }
+/* Removes awkward default styles on some inputs for iOS */
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="text"],
+input[type="tel"],
+input[type="url"],
+input[type="password"],
+textarea {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none; }
+textarea {
+  min-height: 65px;
+  padding-top: 6px;
+  padding-bottom: 6px; }
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="text"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+  border: 1px solid #33C3F0;
+  outline: 0; }
+label,
+legend {
+  display: block;
+  margin-bottom: .5rem;
+  font-weight: 600; }
+fieldset {
+  padding: 0;
+  border-width: 0; }
+input[type="checkbox"],
+input[type="radio"] {
+  display: inline; }
+label > .label-body {
+  display: inline-block;
+  margin-left: .5rem;
+  font-weight: normal; }
+ul {
+  list-style: circle; }
+ol {
+  list-style: decimal; }
+ul ul,
+ul ol,
+ol ol,
+ol ul {
+  margin: 1.5rem 0 1.5rem 3rem;
+  font-size: 90%; }
+li > p {margin : 0;}
+th,
+td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #E1E1E1; }
+th:first-child,
+td:first-child {
+  padding-left: 0; }
+th:last-child,
+td:last-child {
+  padding-right: 0; }
+button,
+.button {
+  margin-bottom: 1rem; }
+input,
+textarea,
+select,
+fieldset {
+  margin-bottom: 1.5rem; }
+pre,
+blockquote,
+dl,
+figure,
+table,
+p,
+ul,
+ol,
+form {
+  margin-bottom: 1.0rem; }
+.u-full-width {
+  width: 100%;
+  box-sizing: border-box; }
+.u-max-full-width {
+  max-width: 100%;
+  box-sizing: border-box; }
+.u-pull-right {
+  float: right; }
+.u-pull-left {
+  float: left; }
+hr {
+  margin-top: 3rem;
+  margin-bottom: 3.5rem;
+  border-width: 0;
+  border-top: 1px solid #E1E1E1; }
+.container:after,
+.row:after,
+.u-cf {
+  content: "";
+  display: table;
+  clear: both; }
+
+pre {
+  display: block;
+  padding: 9.5px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.42857143;
+  word-break: break-all;
+  word-wrap: break-word;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+pre.hljl {
+  margin: 0 0 10px;
+  display: block;
+  background: #f5f5f5;
+  border-radius: 4px;
+  padding : 5px;
+}
+
+pre.output {
+  background: #ffffff;
+}
+
+pre.code {
+  background: #ffffff;
+}
+
+pre.julia-error {
+  color : red
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 0.9em;
+}
+
+
+@media (min-width: 400px) {}
+@media (min-width: 550px) {}
+@media (min-width: 750px) {}
+@media (min-width: 1000px) {}
+@media (min-width: 1200px) {}
+
+h1.title {margin-top : 20px}
+img {max-width : 100%}
+div.title {text-align: center;}
+
+  </style>
+</HEAD>
+
+<BODY>
+  <div class ="container">
+    <div class = "row">
+      <div class = "col-md-12 twelve columns">
+        <div class="title">
+          <h1 class="title">Bag of Words + Term Similarity</h1>
+          <h5>Ryan Hildebrandt</h5>
+          <h5>6/15/2023</h5>
+        </div>
+
+        
+<h1><strong>B</strong>ag <strong>O</strong>f <strong>W</strong>ords &#43; <strong>T</strong>erm <strong>S</strong>imilarity</h1>
+<p><em>Reducing bag of words embedding vector spaces using pretrained embedding derived word similarity</em></p>
+<h2>Purpose</h2>
+<p>This project is an experiment on the effectiveness of using pretrained word embeddings to alter the embedding vector spaces created by bag of word embedding models. Much of the work in the NLP/NLU space relies on pretrained word/sentence embeddings or larger transformer-based models, but the lightweight and relatively quick implementation of bag of words models continues to hold value for many routine NLP tasks. One drawback of bag of words embedding models is the variability of their embedding vector spaces, with the length of any embedding vector depending on the vocabulary contained in the embedded documents. Another drawback of bag of words embeddings is that they are largely unable to account for the meaning of different words in the way pretrained word embeddings are. Take for example the sentence &quot;I need a chicken tender, but a chicken nugget would do.&quot;. Pretrained embeddings are able to account for the different senses of words and words that are similar, such that both the individual word embeddings and the sentence embeddings for this example sentence would consider &quot;chicken nugget&quot; and &quot;chicken tender&quot; to be quite similar. By contrast, bag of words models can only encode the individual words or n-grams within the sentence, and will necessarily treat them as unique regardless of how sematically similar they may be. So in a bag of words model, &quot;chicken nugget&quot; and &quot;chicken tender&quot; would be treated as two values in the embedding space that are just as different as &quot;I&quot; and &quot;chicken&quot; or any other two words. This is where pretrained embeddings may be able to help by accounting for similar terms in the documents to be embedded via bag of words models. So for this project, I&#39;ll be looking into the process and benefits of combining these two embedding approaches, and looking to answer the following question:</p>
+<ul>
+<li><p><strong>Can we use pretrained word embeddings to reduce a bag of words model embedding vector space by combining semantically similar terms, and if so, does this offer any accuracy benefit in a text classification task?</strong></p>
+</li>
+</ul>
+<h2>Approach</h2>
+<p>As with previous work evaluating sentence embedding models, I&#39;ll be using a few different datasets, embedding models, and classifiers. </p>
+<ul>
+<li><p><strong>Pretrained Word Embeddings</strong></p>
+<ul>
+<li><p><a href="https://nlp.stanford.edu/projects/glove/">GloVe Embeddings, 60b Tokens, 50d embedding vectors</a></p>
+</li>
+</ul>
+</li>
+<li><p><strong>Bag of Words Models</strong></p>
+<ul>
+<li><p>TF-IDF &#40;MLJText&#41;</p>
+</li>
+<li><p>Count &#40;MLJText&#41;</p>
+</li>
+<li><p>BM25 &#40;MLJText&#41;</p>
+</li>
+</ul>
+</li>
+<li><p><strong>Classifiers</strong></p>
+<ul>
+<li><p>Dense neural network classifier &#40;MLJFlux&#41;</p>
+</li>
+<li><p>Random forest classifier &#40;EvoTrees&#41;</p>
+</li>
+<li><p>XGBoost classifier &#40;XGBoost&#41;</p>
+</li>
+</ul>
+</li>
+<li><p><strong>Datasets</strong></p>
+<ul>
+<li><p><a href="https://www.kaggle.com/datasets/bitext/training-dataset-for-chatbotsvirtual-assistants">Bitext Customer Support</a>, for shorter documents</p>
+</li>
+<li><p><a href="https://www.kaggle.com/datasets/shivanandmn/multilabel-classification-dataset?select&#61;train.csv">Multilabel Classification from Analytics Vidhya Hackathon, Abstracts</a>, for longer documents</p>
+</li>
+<li><p><a href="https://www.kaggle.com/datasets/shivanandmn/multilabel-classification-dataset?select&#61;train.csv">Multilabel Classification from Analytics Vidhya Hackathon, Titles</a>, for mid-length documents</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2>Algorithm</h2>
+<p>As for the central idea of this project, I landed on the following approach for combining pretrained and bag of words embeddings before passing the embeddings to the classifiers for evaluation.</p>
+<h3>1&#41; Vocabulary Extraction &amp; Embedding</h3>
+<ul>
+<li><p>Beyond splitting documents into individual tokens, there were only a few preprocessing steps that needed to happen before compiling the vocabulary for each set of documents</p>
+</li>
+<li><p>At a word level, all tokens were lowercased and any token &quot;n&#39;t&quot; was marked as Out Of Vocabulary as the splitting of contractions was somewhat inconsistent</p>
+</li>
+<li><p>Any token marked as an aggregated feature is passed over, we&#39;ll touch on this later</p>
+</li>
+</ul>
+
+
+<pre class='hljl'>
+<span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>word_prep</span><span class='hljl-p'>(</span><span class='hljl-n'>word</span><span class='hljl-oB'>::</span><span class='hljl-nf'>Union</span><span class='hljl-p'>{</span><span class='hljl-n'>String</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-nf'>SubString</span><span class='hljl-p'>{</span><span class='hljl-n'>String</span><span class='hljl-p'>}})</span><span class='hljl-t'>
+        </span><span class='hljl-n'>word</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>lowercase</span><span class='hljl-p'>(</span><span class='hljl-n'>word</span><span class='hljl-p'>)</span><span class='hljl-t'>
+        </span><span class='hljl-n'>is_feature</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>contains</span><span class='hljl-p'>(</span><span class='hljl-n'>word</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-so'>r&quot;&lt;feature_.+&gt;&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+        </span><span class='hljl-n'>is_nt</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>word</span><span class='hljl-t'> </span><span class='hljl-oB'>==</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;n&#39;t&quot;</span><span class='hljl-t'>
+        </span><span class='hljl-n'>is_vocab</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>word</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-n'>_vocab</span><span class='hljl-t'>
+        </span><span class='hljl-k'>if</span><span class='hljl-t'> </span><span class='hljl-n'>is_vocab</span><span class='hljl-t'> </span><span class='hljl-oB'>|</span><span class='hljl-t'> </span><span class='hljl-n'>is_feature</span><span class='hljl-t'> </span><span class='hljl-oB'>|</span><span class='hljl-t'> </span><span class='hljl-n'>is_nt</span><span class='hljl-t'>
+            </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>word</span><span class='hljl-t'>
+        </span><span class='hljl-k'>else</span><span class='hljl-t'>
+            </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;OOV&quot;</span><span class='hljl-t'>
+        </span><span class='hljl-k'>end</span><span class='hljl-t'>
+    </span><span class='hljl-k'>return</span><span class='hljl-t'> </span><span class='hljl-n'>out</span><span class='hljl-t'>
+</span><span class='hljl-k'>end</span>
+</pre>
+
+
+
+<ul>
+<li><p>At a document level, each document gets tokenized and passed through the word_prep function above as needed, depending on the contents</p>
+</li>
+</ul>
+
+
+<pre class='hljl'>
+<span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>doc_prep</span><span class='hljl-p'>(</span><span class='hljl-n'>doc</span><span class='hljl-oB'>::</span><span class='hljl-n'>String</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>has_space</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>contains</span><span class='hljl-p'>(</span><span class='hljl-n'>doc</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot; &quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>new_doc</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>String</span><span class='hljl-p'>[]</span><span class='hljl-t'>
+    </span><span class='hljl-n'>split_doc</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>split</span><span class='hljl-p'>(</span><span class='hljl-n'>doc</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-k'>if</span><span class='hljl-t'> </span><span class='hljl-n'>has_space</span><span class='hljl-t'>
+        </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>d</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-n'>split_doc</span><span class='hljl-t'>
+            </span><span class='hljl-n'>is_feature</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>contains</span><span class='hljl-p'>(</span><span class='hljl-n'>d</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-so'>r&quot;&lt;feature_.+&gt;&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+            </span><span class='hljl-n'>is_nt</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>d</span><span class='hljl-t'> </span><span class='hljl-oB'>==</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;n&#39;t&quot;</span><span class='hljl-t'>        
+            </span><span class='hljl-k'>if</span><span class='hljl-t'> </span><span class='hljl-n'>is_feature</span><span class='hljl-t'> </span><span class='hljl-oB'>|</span><span class='hljl-t'> </span><span class='hljl-n'>is_nt</span><span class='hljl-t'>
+                </span><span class='hljl-n'>new_doc</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>push!</span><span class='hljl-p'>(</span><span class='hljl-n'>new_doc</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-nf'>word_prep</span><span class='hljl-p'>(</span><span class='hljl-n'>d</span><span class='hljl-p'>))</span><span class='hljl-t'>
+            </span><span class='hljl-k'>else</span><span class='hljl-t'>
+                </span><span class='hljl-n'>new_doc</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>push!</span><span class='hljl-p'>(</span><span class='hljl-n'>new_doc</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-nf'>tokenize</span><span class='hljl-p'>(</span><span class='hljl-n'>d</span><span class='hljl-p'>)</span><span class='hljl-oB'>...</span><span class='hljl-p'>)</span><span class='hljl-t'>
+            </span><span class='hljl-k'>end</span><span class='hljl-t'>
+        </span><span class='hljl-k'>end</span><span class='hljl-t'>
+    </span><span class='hljl-k'>else</span><span class='hljl-t'>
+        </span><span class='hljl-n'>new_doc</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-p'>[</span><span class='hljl-nf'>word_prep</span><span class='hljl-p'>(</span><span class='hljl-n'>doc</span><span class='hljl-p'>)]</span><span class='hljl-t'>
+    </span><span class='hljl-k'>end</span><span class='hljl-t'>
+    </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>word_prep</span><span class='hljl-oB'>.</span><span class='hljl-p'>(</span><span class='hljl-n'>new_doc</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-k'>return</span><span class='hljl-t'> </span><span class='hljl-n'>out</span><span class='hljl-t'>
+</span><span class='hljl-k'>end</span>
+</pre>
+
+
+
+<ul>
+<li><p>From here, each set of documents gets represented as a list of unique tokens</p>
+</li>
+</ul>
+
+
+<pre class='hljl'>
+<span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>pull_vocab</span><span class='hljl-p'>(</span><span class='hljl-n'>docs</span><span class='hljl-oB'>::</span><span class='hljl-nf'>Vector</span><span class='hljl-p'>{</span><span class='hljl-n'>String</span><span class='hljl-p'>})</span><span class='hljl-t'>
+    </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-p'>[]</span><span class='hljl-t'>
+    </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>doc</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-n'>docs</span><span class='hljl-t'>
+        </span><span class='hljl-n'>doc</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>doc_prep</span><span class='hljl-p'>(</span><span class='hljl-n'>doc</span><span class='hljl-p'>)</span><span class='hljl-t'>
+        </span><span class='hljl-nf'>push!</span><span class='hljl-p'>(</span><span class='hljl-n'>out</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>doc</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-k'>end</span><span class='hljl-t'>
+    </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>union</span><span class='hljl-p'>(</span><span class='hljl-nf'>vcat</span><span class='hljl-p'>(</span><span class='hljl-n'>out</span><span class='hljl-oB'>...</span><span class='hljl-p'>))</span><span class='hljl-t'>
+    </span><span class='hljl-k'>return</span><span class='hljl-t'> </span><span class='hljl-n'>out</span><span class='hljl-t'>
+</span><span class='hljl-k'>end</span>
+</pre>
+
+
+
+<ul>
+<li><p>And finally, each token is converted to an embedding vector via the pretrained word embedding file</p>
+</li>
+</ul>
+
+
+<pre class='hljl'>
+<span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>encode</span><span class='hljl-p'>(</span><span class='hljl-n'>doc</span><span class='hljl-oB'>::</span><span class='hljl-n'>String</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>doc</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>doc_prep</span><span class='hljl-p'>(</span><span class='hljl-n'>doc</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>ind</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-p'>[</span><span class='hljl-n'>ind_dict</span><span class='hljl-p'>[</span><span class='hljl-n'>d</span><span class='hljl-p'>]</span><span class='hljl-t'> </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>d</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-n'>doc</span><span class='hljl-p'>]</span><span class='hljl-t'>
+    </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>emb_df</span><span class='hljl-p'>[</span><span class='hljl-n'>ind</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;emb&quot;</span><span class='hljl-p'>]</span><span class='hljl-t'>
+    </span><span class='hljl-k'>return</span><span class='hljl-t'> </span><span class='hljl-n'>out</span><span class='hljl-t'>
+</span><span class='hljl-k'>end</span>
+</pre>
+
+
+
+<ul>
+<li><p>This results in a vocabulary and embedding matrix, with each row of the matrix corresponding to one vocabulary entry</p>
+</li>
+<li><p>To give this algorithm a better chance of cleanly clustering and aggregating relevant features &#40;and to make eventual visualization easier&#41;, the embedding matrix is passed to UMAP for dimensionality reduction and centered</p>
+</li>
+</ul>
+<h3>2&#41; Term Clustering</h3>
+<ul>
+<li><p>Once we have the embedding matrix, euclidean distance is calculated between each of the points</p>
+</li>
+<li><p>This pairwise distance matrix is then passed to a hierarchical clustering algorithm &#40;from Clustering.jl&#41; to form the cluster tree</p>
+</li>
+</ul>
+
+
+<pre class='hljl'>
+<span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>docs_to_clusters</span><span class='hljl-p'>(</span><span class='hljl-n'>docs</span><span class='hljl-oB'>::</span><span class='hljl-nf'>Vector</span><span class='hljl-p'>{</span><span class='hljl-n'>String</span><span class='hljl-p'>})</span><span class='hljl-t'>
+    </span><span class='hljl-n'>vocab</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>pull_vocab</span><span class='hljl-p'>(</span><span class='hljl-n'>docs</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>coords</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>docs_to_word_embs</span><span class='hljl-p'>(</span><span class='hljl-n'>vocab</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>dists</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>pairwise</span><span class='hljl-p'>(</span><span class='hljl-nf'>Euclidean</span><span class='hljl-p'>(),</span><span class='hljl-t'> </span><span class='hljl-n'>coords</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>dims</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-ni'>2</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>clusts</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>hclust</span><span class='hljl-p'>(</span><span class='hljl-n'>dists</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-p'>[</span><span class='hljl-n'>vocab</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>coords</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>dists</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>clusts</span><span class='hljl-p'>]</span><span class='hljl-t'>
+    </span><span class='hljl-k'>return</span><span class='hljl-t'> </span><span class='hljl-n'>out</span><span class='hljl-t'>
+</span><span class='hljl-k'>end</span>
+</pre>
+
+
+
+<ul>
+<li><p>I explored a range of clustering algorithms available in Clustering.jl, and found that hierarchical clustering via hclust provided the level of flexibility I was looking for in this algorithm</p>
+</li>
+<li><p>Note that at this stage the clustering tree has not been &quot;cut&quot; at any particular branch yet, that will come in the next step and forms one of the main parameters used to control term aggregation</p>
+</li>
+</ul>
+<h3>3&#41; Term Aggregation</h3>
+<ul>
+<li><p>With the clustering tree generated, the next step is to choose value of k at which to cut the tree, resulting in k clusters</p>
+<ul>
+<li><p>From Clustering.jl docs: <code>k::Integer</code> &#40;optional&#41; the number of desired clusters.</p>
+</li>
+</ul>
+</li>
+<li><p>Note that k&#39;s relationship to the cluster tree &#40;and by extension the embedded vocabulary&#41; means that it will be one more than the number of aggregated features, each of which will contain any number of terms which have been identified to be semantically similar enough to end up in the same cluster</p>
+</li>
+<li><p>In addition to k, I included two measures of cluster quality, mean euclidean distance and silhouette score</p>
+<ul>
+<li><p>Mean euclidean distance measures the average distance from each point in the cluster to the cluster centroid, with lower values representing a more tightly grouped cluster</p>
+</li>
+<li><p>Silhouette score also measures how well each point is matched to its cluster, but contrasts this against a measure of how well each point is diferrentiated from other clusters</p>
+</li>
+<li><p>Once these metrics are calculated, both are normalized such that they range from -1 to 1 and higher values are related to better cluster fit</p>
+</li>
+</ul>
+</li>
+<li><p>From here, the next step is to choose values of k and one of the goodness of fit metrics to use in the term aggregation</p>
+</li>
+<li><p>For example, with k &#61; 5 and eucl &#61; .4, we would split the data into 5 clusters, select those with a mean euclidean distance &lt; .4, and aggregate all terms in each selected cluster into a standin feature</p>
+</li>
+</ul>
+
+
+<pre class='hljl'>
+<span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>combine_features</span><span class='hljl-p'>(</span><span class='hljl-n'>grouped_vocab</span><span class='hljl-oB'>::</span><span class='hljl-nf'>Vector</span><span class='hljl-p'>{</span><span class='hljl-nf'>Vector</span><span class='hljl-p'>{</span><span class='hljl-n'>String</span><span class='hljl-p'>}},</span><span class='hljl-t'> </span><span class='hljl-n'>metric</span><span class='hljl-oB'>::</span><span class='hljl-nf'>Vector</span><span class='hljl-p'>{</span><span class='hljl-n'>Float64</span><span class='hljl-p'>},</span><span class='hljl-t'> </span><span class='hljl-n'>threshold</span><span class='hljl-oB'>::</span><span class='hljl-n'>Number</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>feature_override</span><span class='hljl-oB'>::</span><span class='hljl-n'>Vector</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>flat_vocab</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>vcat</span><span class='hljl-p'>(</span><span class='hljl-n'>grouped_vocab</span><span class='hljl-oB'>...</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>out</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>Dict</span><span class='hljl-p'>(</span><span class='hljl-n'>flat_vocab</span><span class='hljl-t'> </span><span class='hljl-oB'>.=&gt;</span><span class='hljl-t'> </span><span class='hljl-n'>flat_vocab</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>n</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-ni'>0</span><span class='hljl-t'>
+    </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-p'>(</span><span class='hljl-n'>group</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>met</span><span class='hljl-p'>)</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-nf'>zip</span><span class='hljl-p'>(</span><span class='hljl-n'>grouped_vocab</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>metric</span><span class='hljl-p'>)</span><span class='hljl-t'>
+        </span><span class='hljl-k'>if</span><span class='hljl-t'> </span><span class='hljl-nfB'>0.0</span><span class='hljl-t'> </span><span class='hljl-oB'>&lt;</span><span class='hljl-t'> </span><span class='hljl-n'>met</span><span class='hljl-t'> </span><span class='hljl-oB'>&lt;</span><span class='hljl-t'> </span><span class='hljl-n'>threshold</span><span class='hljl-t'>
+            </span><span class='hljl-n'>n</span><span class='hljl-t'> </span><span class='hljl-oB'>+=</span><span class='hljl-t'> </span><span class='hljl-ni'>1</span><span class='hljl-t'>
+            </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>word</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-n'>group</span><span class='hljl-t'>
+                </span><span class='hljl-n'>out</span><span class='hljl-p'>[</span><span class='hljl-n'>word</span><span class='hljl-p'>]</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;&lt;feature_</span><span class='hljl-si'>$n</span><span class='hljl-s'>&gt;&quot;</span><span class='hljl-t'>
+            </span><span class='hljl-k'>end</span><span class='hljl-t'>
+        </span><span class='hljl-k'>end</span><span class='hljl-t'>
+    </span><span class='hljl-k'>end</span><span class='hljl-t'>
+    </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>word</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-n'>feature_override</span><span class='hljl-t'>
+        </span><span class='hljl-n'>out</span><span class='hljl-p'>[</span><span class='hljl-n'>word</span><span class='hljl-p'>]</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>word</span><span class='hljl-t'>
+    </span><span class='hljl-k'>end</span><span class='hljl-t'>
+    </span><span class='hljl-k'>return</span><span class='hljl-t'> </span><span class='hljl-n'>out</span><span class='hljl-t'>
+</span><span class='hljl-k'>end</span><span class='hljl-t'>
+</span><span class='hljl-cs'># in the above function, feature_override is provided as a way to ensure that certain words do not get aggregated, but did not end up being explored here</span>
+</pre>
+
+
+
+<ul>
+<li><p>After mapping each of the aggregated features to the original documents, they are ready to be passed to the bag of words embedding models</p>
+</li>
+<li><p>All of the embedding vector space manipulation has completed at this point, so the bag of word embeddings and classifiers are all standard in their implementations</p>
+</li>
+</ul>
+<h2>Results</h2>
+<p>In addition to several values for k and the goodness of fit metrics, I also included unclustered embeddings from each bag of words model as a baseline before evaluating using the three classifiers. As an additional note, my machine was limited in how much of the larger datasets it could handle, so I took a sample of 3000 documents &#40;as many documents from the abstract dataset as my machine could handle&#41; from each for a balanced comparison, in addition to running the classifiers again with as many documents as possible. This sample size difference didn&#39;t end up changing the performance in any major ways, so unless otherwise indicated I&#39;ll use the sample of 3000 documents from here on out.</p>
+<h3>Main Effects</h3>
+
+<pre class="output">
+11×7 DataFrame
+ Row │ Name             Coef.         Std. Error   t           Pr&#40;&gt;|t|&#41;    
+  Lower 95&#37;     Upper 95&#37;
+     │ String           Float64       Float64      Float64     Float64     
+  Float64       Float64
+─────┼─────────────────────────────────────────────────────────────────────
+─────────────────────────────
+   1 │ &#40;Intercept&#41;       0.675446     0.0196823     34.3174    4.12929e-161
+   0.636813      0.714079
+   2 │ dataset: bitext   0.205263     0.00792595    25.8976    1.00244e-108
+   0.189705      0.22082
+   3 │ dataset: title   -0.0935006    0.00792595   -11.7968    8.5776e-30  
+  -0.109058     -0.0779432
+   4 │ k                -0.000258365  0.000199358   -1.29598   0.195344    
+  -0.000649673   0.000132944
+   5 │ metric: eucl      0.0676228    0.0206592      3.27325   0.00110737  
+   0.0270721     0.108174
+   6 │ metric: sil       0.0741249    0.0206592      3.58798   0.000352867 
+   0.0335741     0.114676
+   7 │ threshold        -0.0587037    0.0232585     -2.52397   0.0117902   
+  -0.104356     -0.013051
+   8 │ bow: count       -0.0371685    0.00792595    -4.68946   3.20407e-6  
+  -0.0527258    -0.0216111
+   9 │ bow: tfidf       -0.00334528   0.00792595    -0.422067  0.673086    
+  -0.0189027     0.0122121
+  10 │ classifier: rfc  -0.0962843    0.00792595   -12.148     2.32584e-31 
+  -0.111842     -0.080727
+  11 │ classifier: xgc   0.0262903    0.00792595     3.31699   0.000949677 
+   0.0107329     0.0418477
+</pre>
+
+
+<h4>Datasets</h4>
+<p>There were some overall differences in accuracy by dataset, with the Bitext dataset outperforming the abstract dataset, which outperformed the title dataset. The differences based on document length were somewhat unsurprising, with the long document abstract dataset outperforming the medium length title dataset. It may be that academic paper titles are a little less reliably related to their content as compared to their abstracts.</p>
+
+
+<pre class='hljl'>
+<span class='hljl-nf'>combine</span><span class='hljl-p'>(</span><span class='hljl-nf'>groupby</span><span class='hljl-p'>(</span><span class='hljl-n'>results_sample</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;dataset&quot;</span><span class='hljl-p'>),</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;acc&quot;</span><span class='hljl-t'> </span><span class='hljl-oB'>=&gt;</span><span class='hljl-t'> </span><span class='hljl-n'>mean</span><span class='hljl-p'>)</span>
+</pre>
+
+
+
+<div><div style = "float: left;"><span>3×2 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "header"><th class = "rowNumber" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">dataset</th><th style = "text-align: left;">acc_mean</th></tr><tr class = "subheader headerLastRow"><th class = "rowNumber" style = "font-weight: bold; text-align: right;"></th><th title = "String" style = "text-align: left;">String</th><th title = "Float64" style = "text-align: left;">Float64</th></tr></thead><tbody><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: left;">abstract</td><td style = "text-align: right;">0.68307</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: left;">title</td><td style = "text-align: right;">0.58957</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: left;">bitext</td><td style = "text-align: right;">0.888333</td></tr></tbody></table></div>
+
+<h4>Term Similarity Metrics</h4>
+<p>As far as term similarity metrics, there were no significant effects of k value, and the main effects of selection metric and metric threshold values were less than clear. The main effect of threshold seemed to show a negative association between selection threshold and accuracy, but the range of accuracy was relatively small and the accuracy for the highest and lowest thresholds were nearly identical. There was also a main effect of selection metric with euclidean distance and silhouette score outperforming the baseline, but there doesn&#39;t seem to be a clear interpretation of this relationship when there is no interpretable effect of threshold value on accuracy.</p>
+
+
+<pre class='hljl'>
+<span class='hljl-nf'>combine</span><span class='hljl-p'>(</span><span class='hljl-nf'>groupby</span><span class='hljl-p'>(</span><span class='hljl-n'>results_sample</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;k&quot;</span><span class='hljl-p'>),</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;acc&quot;</span><span class='hljl-t'> </span><span class='hljl-oB'>=&gt;</span><span class='hljl-t'> </span><span class='hljl-n'>mean</span><span class='hljl-p'>)</span>
+</pre>
+
+
+
+<div><div style = "float: left;"><span>4×2 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "header"><th class = "rowNumber" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">k</th><th style = "text-align: left;">acc_mean</th></tr><tr class = "subheader headerLastRow"><th class = "rowNumber" style = "font-weight: bold; text-align: right;"></th><th title = "Int64" style = "text-align: left;">Int64</th><th title = "Float64" style = "text-align: left;">Float64</th></tr></thead><tbody><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: right;">0</td><td style = "text-align: right;">0.675864</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: right;">10</td><td style = "text-align: right;">0.725907</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: right;">25</td><td style = "text-align: right;">0.723685</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">4</td><td style = "text-align: right;">50</td><td style = "text-align: right;">0.715827</td></tr></tbody></table></div>
+
+
+<pre class='hljl'>
+<span class='hljl-nf'>combine</span><span class='hljl-p'>(</span><span class='hljl-nf'>groupby</span><span class='hljl-p'>(</span><span class='hljl-n'>results_sample</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;metric&quot;</span><span class='hljl-p'>),</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;acc&quot;</span><span class='hljl-t'> </span><span class='hljl-oB'>=&gt;</span><span class='hljl-t'> </span><span class='hljl-n'>mean</span><span class='hljl-p'>)</span>
+</pre>
+
+
+
+<div><div style = "float: left;"><span>3×2 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "header"><th class = "rowNumber" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">metric</th><th style = "text-align: left;">acc_mean</th></tr><tr class = "subheader headerLastRow"><th class = "rowNumber" style = "font-weight: bold; text-align: right;"></th><th title = "String" style = "text-align: left;">String</th><th title = "Float64" style = "text-align: left;">Float64</th></tr></thead><tbody><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: left;">eucl</td><td style = "text-align: right;">0.718556</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: left;">sil</td><td style = "text-align: right;">0.725058</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: left;">_</td><td style = "text-align: right;">0.675864</td></tr></tbody></table></div>
+
+
+<pre class='hljl'>
+<span class='hljl-nf'>combine</span><span class='hljl-p'>(</span><span class='hljl-nf'>groupby</span><span class='hljl-p'>(</span><span class='hljl-n'>results_sample</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;threshold&quot;</span><span class='hljl-p'>),</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;acc&quot;</span><span class='hljl-t'> </span><span class='hljl-oB'>=&gt;</span><span class='hljl-t'> </span><span class='hljl-n'>mean</span><span class='hljl-p'>)</span>
+</pre>
+
+
+
+<div><div style = "float: left;"><span>6×2 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "header"><th class = "rowNumber" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">threshold</th><th style = "text-align: left;">acc_mean</th></tr><tr class = "subheader headerLastRow"><th class = "rowNumber" style = "font-weight: bold; text-align: right;"></th><th title = "Float64" style = "text-align: left;">Float64</th><th title = "Float64" style = "text-align: left;">Float64</th></tr></thead><tbody><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: right;">0.1</td><td style = "text-align: right;">0.733045</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: right;">0.2</td><td style = "text-align: right;">0.728128</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: right;">0.3</td><td style = "text-align: right;">0.722377</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">4</td><td style = "text-align: right;">0.4</td><td style = "text-align: right;">0.715453</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">5</td><td style = "text-align: right;">0.5</td><td style = "text-align: right;">0.710031</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">6</td><td style = "text-align: right;">0.0</td><td style = "text-align: right;">0.675864</td></tr></tbody></table></div>
+
+<h4>Embedding Models</h4>
+<p>The bag of words models showed an expected difference in accuracy, with simple count emgeddings having the lowest performance and both TF-IDF and BM25 having higher performance. Both TF-IDF and BM25 incorporate weights into the more standard count embeddings with the express intent of improving the information stored in the embeddings, so this serves as a small sanity check that the different models are behaving as expected.</p>
+
+
+<pre class='hljl'>
+<span class='hljl-nf'>combine</span><span class='hljl-p'>(</span><span class='hljl-nf'>groupby</span><span class='hljl-p'>(</span><span class='hljl-n'>results_sample</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;bow&quot;</span><span class='hljl-p'>),</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;acc&quot;</span><span class='hljl-t'> </span><span class='hljl-oB'>=&gt;</span><span class='hljl-t'> </span><span class='hljl-n'>mean</span><span class='hljl-p'>)</span>
+</pre>
+
+
+
+<div><div style = "float: left;"><span>3×2 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "header"><th class = "rowNumber" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">bow</th><th style = "text-align: left;">acc_mean</th></tr><tr class = "subheader headerLastRow"><th class = "rowNumber" style = "font-weight: bold; text-align: right;"></th><th title = "String" style = "text-align: left;">String</th><th title = "Float64" style = "text-align: left;">Float64</th></tr></thead><tbody><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: left;">tfidf</td><td style = "text-align: right;">0.730484</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: left;">count</td><td style = "text-align: right;">0.696661</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: left;">bm25</td><td style = "text-align: right;">0.733829</td></tr></tbody></table></div>
+
+<h4>Classifiers</h4>
+<p>The main effect of classifier was also as expected, with random forest classifier performing worse than the dense neural network, which performed worse than the xgboost tree classifier.</p>
+
+
+<pre class='hljl'>
+<span class='hljl-nf'>combine</span><span class='hljl-p'>(</span><span class='hljl-nf'>groupby</span><span class='hljl-p'>(</span><span class='hljl-n'>results_sample</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;classifier&quot;</span><span class='hljl-p'>),</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;acc&quot;</span><span class='hljl-t'> </span><span class='hljl-oB'>=&gt;</span><span class='hljl-t'> </span><span class='hljl-n'>mean</span><span class='hljl-p'>)</span>
+</pre>
+
+
+
+<div><div style = "float: left;"><span>3×2 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "header"><th class = "rowNumber" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">classifier</th><th style = "text-align: left;">acc_mean</th></tr><tr class = "subheader headerLastRow"><th class = "rowNumber" style = "font-weight: bold; text-align: right;"></th><th title = "String" style = "text-align: left;">String</th><th title = "Float64" style = "text-align: left;">Float64</th></tr></thead><tbody><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: left;">rfc</td><td style = "text-align: right;">0.647372</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: left;">xgc</td><td style = "text-align: right;">0.769946</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: left;">nnc</td><td style = "text-align: right;">0.743656</td></tr></tbody></table></div>
+
+<h3>Interactions</h3>
+
+<pre class="output">
+27×7 DataFrame
+ Row │ Name                               Coef.        Std. Error  t       
+    Pr&#40;&gt;|t|&#41;      Lower 95&#37;   Upper 95&#37;
+     │ String                             Float64      Float64     Float64 
+    Float64       Float64     Float64
+─────┼─────────────────────────────────────────────────────────────────────
+─────────────────────────────────────────
+   1 │ &#40;Intercept&#41;                         0.743172    0.00713968  104.09  
+    0.0            0.729158    0.757186
+   2 │ dataset: bitext                     0.22        0.010097     21.7886
+    3.37876e-83    0.200181    0.239819
+   3 │ dataset: title                     -0.0745161   0.010097     -7.38  
+    3.92734e-13   -0.0943356  -0.0546967
+   4 │ bow: count                         -0.413763    0.010097    -40.9787
+    1.15089e-199  -0.433583   -0.393944
+   5 │ bow: tfidf                          0.00602151  0.010097      0.5963
+64  0.551099      -0.0137979   0.0258409
+   6 │ classifier: rfc                    -0.0426344   0.010097     -4.2224
+7   2.69028e-5    -0.0624538  -0.022815
+   7 │ classifier: xgc                     0.0011828   0.010097      0.1171
+43  0.906776      -0.0186366   0.0210022
+   8 │ dataset: bitext &amp; bow: count        0.413333    0.0142794    28.9462
+    4.73294e-127   0.385304    0.441362
+   9 │ dataset: title &amp; bow: count         0.4         0.0142794    28.0125
+    2.83552e-121   0.371971    0.428029
+  10 │ dataset: bitext &amp; bow: tfidf       -0.00698925  0.0142794    -0.4894
+65  0.624645      -0.0350182   0.0210397
+  11 │ dataset: title &amp; bow: tfidf        -0.0152151   0.0142794    -1.0655
+3   0.286955      -0.043244    0.0128139
+  12 │ dataset: bitext &amp; classifier: rfc  -0.19414     0.0142794   -13.5958
+    4.52795e-38   -0.222169   -0.166111
+  13 │ dataset: title &amp; classifier: rfc   -0.136667    0.0142794    -9.5709
+3   1.24394e-20   -0.164696   -0.108638
+  14 │ dataset: bitext &amp; classifier: xgc  -0.0159677   0.0142794    -1.1182
+4   0.263796      -0.0439966   0.0120612
+  15 │ dataset: title &amp; classifier: xgc   -0.0494086   0.0142794    -3.4601
+4   0.00056812    -0.0774375  -0.0213797
+  16 │ bow: count &amp; classifier: rfc        0.421828    0.0142794    29.5411
+    9.9035e-131    0.393799    0.449857
+  17 │ bow: tfidf &amp; classifier: rfc       -0.0133871   0.0142794    -0.9375
+14  0.348774      -0.041416    0.0146418
+  18 │ bow: count &amp; classifier: xgc        0.414086    0.0142794    28.9989
+    2.23374e-127   0.386057    0.442115
+  19 │ bow: tfidf &amp; classifier: xgc       -0.0158602   0.0142794    -1.1107
+1   0.267023      -0.0438891   0.0121687
+  20 │ dataset: bitext &amp; bow: count &amp; c…  -0.35543     0.0201941   -17.6007
+    5.78135e-59   -0.395069   -0.315791
+  21 │ dataset: title &amp; bow: count &amp; cl…  -0.39586     0.0201941   -19.6028
+    2.52694e-70   -0.435499   -0.356221
+  22 │ dataset: bitext &amp; bow: tfidf &amp; c…   0.025       0.0201941     1.2379
+9   0.216079      -0.0146389   0.0646389
+  23 │ dataset: title &amp; bow: tfidf &amp; cl…   0.0105376   0.0201941     0.5218
+19  0.601939      -0.0291012   0.0501765
+  24 │ dataset: bitext &amp; bow: count &amp; c…  -0.408011    0.0201941   -20.2045
+    7.9655e-74    -0.44765    -0.368372
+  25 │ dataset: title &amp; bow: count &amp; cl…  -0.399086    0.0201941   -19.7625
+    2.99599e-71   -0.438725   -0.359447
+  26 │ dataset: bitext &amp; bow: tfidf &amp; c…   0.0170968   0.0201941     0.8466
+24  0.397455      -0.0225421   0.0567356
+  27 │ dataset: title &amp; bow: tfidf &amp; cl…   0.0174194   0.0201941     0.8625
+98  0.388614      -0.0222195   0.0570582
+</pre>
+
+
+<p>There was only one interaction in the results, which was a three-way interaction between dataset, bag of words model, and classifier. As tends to be the case with anything over a two-way interaction, interpretation of this one is on the tricky side, so I&#39;ll lay out the relevant cases below as succinctly as possible. When using count embeddings in the random forest classifier, the accuracy on title dataset was less than that of both the abstract &amp; bitext datasets, though the abstract and bitext datasets did not differ significantly. For the other two classifiers with the same embeddings, the interaction effect goes away and instead the main effect of dataset reappears. Making sense of this interaction as best I can, I&#39;d say that the accuracy decrease resulting from the least information-dense embeddings &#40;count&#41; and the worst performing classifier &#40;random forest&#41; has a bigger effect on the relatively easy bitext dataset, bringing it down to the accuracy of the abstract dataset.</p>
+<h2>Conclusions</h2>
+<p>Unfortunately, the central premise of the present project didn&#39;t find support in the data. The only effects present seem to be those more or less expected from the datasets, embedding models, and classifiers. None of the clustering k values, similarity metrics, or threshold values produced the desired results in a consistent or meaningful way, in either main effects or interactions. Additionally, the relative complexity of implementing the term similarity aspect of this project immediately set a fairly high bar for a worthwhile improvement boost.</p>
+
+
+        <HR/>
+        <div class="footer">
+          <p>
+            Published from <a href="bowts.jmd">bowts.jmd</a>
+            using <a href="http://github.com/JunoLab/Weave.jl">Weave.jl</a> v0.10.12 on 2023-06-15.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</BODY>
+
+</HTML>
